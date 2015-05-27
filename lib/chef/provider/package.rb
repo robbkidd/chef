@@ -1,6 +1,6 @@
 #
 # Author:: Adam Jacob (<adam@opscode.com>)
-# Copyright:: Copyright (c) 2008 Opscode, Inc.
+# Copyright:: Copyright (c) 2008-2015 Chef Software, Inc.
 # License:: Apache License, Version 2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,6 +37,11 @@ class Chef
       def initialize(new_resource, run_context)
         super
         @candidate_version = nil
+        @supports_arrays = false
+      end
+
+      def self.package_class_supports_arrays
+        @supports_arrays = true
       end
 
       def whyrun_supported?
@@ -90,7 +95,9 @@ class Chef
         @new_resource.version(versions_for_new_resource)
 
         converge_by(install_description) do
-          install_package(package_names_for_targets, versions_for_targets)
+          with_subclass_array_wrapper(package_names_for_targets, versions_for_targets) do |name, version|
+            install_package(name, version)
+          end
           Chef::Log.info("#{@new_resource} installed #{package_names_for_targets} at #{versions_for_targets}")
         end
       end
@@ -117,7 +124,9 @@ class Chef
         @new_resource.version(versions_for_new_resource)
 
         converge_by(upgrade_description) do
-          upgrade_package(package_names_for_targets, versions_for_targets)
+          with_subclass_array_wrapper(package_names_for_targets, versions_for_targets) do |name, version|
+            upgrade_package(name, version)
+          end
           log_allow_downgrade = allow_downgrade ? '(allow_downgrade)' : ''
           Chef::Log.info("#{@new_resource} upgraded#{log_allow_downgrade} #{package_names_for_targets} to #{versions_for_targets}")
         end
@@ -138,12 +147,13 @@ class Chef
 
       private :upgrade_description
 
-      # @todo: ability to remove an array of packages
       def action_remove
         if removing_package?
           description = @new_resource.version ? "version #{@new_resource.version} of " :  ""
           converge_by("remove #{description}package #{@current_resource.package_name}") do
-            remove_package(@current_resource.package_name, @new_resource.version)
+            with_subclass_array_wrapper(@current_resource.package_name, @new_resource.version) do |name, version|
+              remove_package(name, version)
+            end
             Chef::Log.info("#{@new_resource} removed")
           end
         else
@@ -172,18 +182,18 @@ class Chef
         end
       end
 
-      # @todo: ability to purge an array of packages
       def action_purge
         if removing_package?
           description = @new_resource.version ? "version #{@new_resource.version} of" : ""
           converge_by("purge #{description} package #{@current_resource.package_name}") do
-            purge_package(@current_resource.package_name, @new_resource.version)
+            with_subclass_array_wrapper(@current_resource.package_name, @new_resource.version) do |name, version|
+              purge_package(name, version)
+            end
             Chef::Log.info("#{@new_resource} purged")
           end
         end
       end
 
-      # @todo: ability to reconfigure an array of packages
       def action_reconfig
         if @current_resource.version == nil then
           Chef::Log.debug("#{@new_resource} is NOT installed - nothing to do")
@@ -198,7 +208,10 @@ class Chef
         if preseed_file = get_preseed_file(@new_resource.package_name, @current_resource.version)
           converge_by("reconfigure package #{@new_resource.package_name}") do
             preseed_package(preseed_file)
-            reconfig_package(@new_resource.package_name, @current_resource.version)
+            with_subclass_array_wrapper(@new_resource.package_name, @current_resource.version) do |name, version|
+              reconfig_package(name, version)
+
+            end
             Chef::Log.info("#{@new_resource} reconfigured")
           end
         else
@@ -207,6 +220,15 @@ class Chef
       end
 
       # @todo use composition rather than inheritance
+
+      def with_subclass_array_wrapper(name, version)
+        if supports_arrays?
+          yield [name].flatten, [version].flatten
+        else
+          yield name, version
+        end
+      end
+
       def install_package(name, version)
         raise Chef::Exceptions::UnsupportedAction, "#{self.to_s} does not support :install"
       end
@@ -514,6 +536,9 @@ class Chef
         args
       end
 
+      def supports_arrays?
+        !!@supports_arrays
+      end
     end
   end
 end
