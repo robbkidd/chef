@@ -96,6 +96,15 @@ class Chef
           shell_out!("#{choco_exe} uninstall -y #{cmd_args} #{names}"
         end
 
+        # Support :uninstall as an action in order for users to easily convert
+        # from the `chocolatey` provider in the cookbook.  This lands in the
+        # code in deprecated form since we do not want to support :uninstall as
+        # a valid action on any other package provider.
+        def uninstall_package(name, version)
+          Chef::Log.deprecation "The use of action :uninstall on the chocolatey_package provider is deprecated, please use :remove"
+          remove_package(name, version)
+        end
+
         # Choco does not have dpkg's distinction between purge and remove
         alias_method :purge_package, :remove_package
 
