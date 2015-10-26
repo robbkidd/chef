@@ -27,25 +27,35 @@ class Chef
 
         provides :chocolatey_package, os: "windows"
 
+        # Declare that our arguments should be arrays
         package_class_supports_arrays
 
+        # Responsible for building the current_resource and as a (necessary)
+        # side effect this populates the candidate_version Array.
+        #
+        # @return [Chef::Resource::ChocolateyPackage] the current_resource
         def load_current_resource
           current_resource = Chef::Resource::ChocolateyPackage.new(new_resource.name)
           current_resource.package_name(new_resource.package_name)
           current_resource.version(build_current_versions)
-          populate_candiate_versions
+          @candidate_version = build_candidate_versions
           current_resource
         end
 
+        # Define provider-specific exceptions
         def define_resource_requirements
           super
 
-          requirements.assert(:all_actions) do |a|
-            a.assertion { !new_resource.source }
-            a.failure_message(Chef::Exceptions::Package, 'chocolatey package provider cannot handle source attribute.')
+          # this is an error even in why-run mode
+          if new_resource.source
+            raise Chef::Exceptions::Package, 'chocolatey package provider cannot handle source attribute.'
           end
         end
 
+        # Install multiple packages via choco.exe
+        #
+        # @param name [Array<String>] array of package names to install
+        # @param version [Array<String>] array of versions to install
         def install_package(name, version)
           name_versions = name_array.zip(version_array)
 
@@ -64,6 +74,10 @@ class Chef
           end
         end
 
+        # Upgrade multiple packages via choco.exe
+        #
+        # @param name [Array<String>] array of package names to install
+        # @param version [Array<String>] array of versions to install
         def upgrade_package(name, version)
           unless version.all? { |n,v| v.nil? }
             raise Chef::Exceptions::Package, "Chocolatey Provider does not support version pins on upgrade command, use install instead"
@@ -73,17 +87,24 @@ class Chef
           shell_out!("#{choco_exe} upgrade -y #{cmd_args} #{names}"
         end
 
+        # Remove multiple packages via choco.exe
+        #
+        # @param name [Array<String>] array of package names to install
+        # @param version [Array<String>] array of versions to install
         def remove_package(name, version)
           names = name.join(' ')
           shell_out!("#{choco_exe} uninstall -y #{cmd_args} #{names}"
         end
 
-        def purge_package(name, version)
-          remove_package(name, version)
-        end
+        # Choco does not have dpkg's distinction between purge and remove
+        alias_method :purge_package, :remove_package
 
         private
 
+        # Magic to find where chocolatey is installed in the system, and to
+        # return the full path of choco.exe
+        #
+        # @return [String] full path of choco.exe
         def choco_exe
           @choco_exe ||=
             File.join(
@@ -95,16 +116,16 @@ class Chef
           )
         end
 
-        def populate_candidate_versions
+        def build_candidate_versions
           if new_resource.name.is_a?(Array)
             # FIXME: superclass should be made smart enough so that when we declare
             # package_class_supports_arrays, then it accepts current_resource.version as an
             # array when new_resource.name is not
             new_resource.name.map do |name|
-              self.class.available_packages[name]
+              available_packages[name]
             end
           else
-            self.class.available_packages[new_resource.name]
+            available_packages[new_resource.name]
           end
         end
 
@@ -121,21 +142,34 @@ class Chef
           end
         end
 
+        # Helper to pull optional args out of new_resource
+        #
+        # @return [String] options from new_resource or empty string
         def cmd_args
           new_resource.options || ""
         end
 
-        def self.available_packages
-          @available_packages ||= parse_list_output("#{choco_exe} list -r")
+        # Available packages in chocolatey as a Hash of names mapped to versions
+        #
+        # @return [Hash] name-to-version mapping of available packages
+        def available_packages
+          @available_packages ||= parse_list_output("list -r")
         end
 
+        # Insatlled packages in chocolatey as a Hash of names mapped to versions
+        #
+        # @return [Hash] name-to-version mapping of installed packages
         def installed_packages
-          @installed_packages ||= parse_list_output("#{choco_exe} list -l -r")
+          @installed_packages ||= parse_list_output("list -l -r")
         end
 
-        def self.parse_list_output(cmd)
+        # Helper to convert choco.exe list output to a Hash
+        #
+        # @param cmd [String] command to run
+        # @return [String] list output converted to ruby Hash
+        def parse_list_output(cmd)
           hash = {}
-          shell_out!(cmd).stdout.each_line do |line|
+          shell_out!("#{choco.exe} #{cmd}").stdout.each_line do |line|
             name, version = line.split('|')
             hash[name] = version
           end
