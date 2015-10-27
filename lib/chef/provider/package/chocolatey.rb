@@ -116,7 +116,7 @@ class Chef
         # @return [String] full path of choco.exe
         def choco_exe
           @choco_exe ||=
-            File.join(
+            ::File.join(
               powershell_out!(
                 "[System.Environment]::GetEnvironmentVariable('ChocolateyInstall', 'MACHINE')"
               ).stdout.chomp,
