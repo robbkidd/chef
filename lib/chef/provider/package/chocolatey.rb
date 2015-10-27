@@ -57,7 +57,7 @@ class Chef
         # @param name [Array<String>] array of package names to install
         # @param version [Array<String>] array of versions to install
         def install_package(name, version)
-          name_versions = name_array.zip(version_array)
+          name_versions = name.zip(version)
 
           name_nil_versions = name_versions.select { |n,v| v.nil? }
           name_has_versions = name_versions.reject { |n,v| v.nil? }
