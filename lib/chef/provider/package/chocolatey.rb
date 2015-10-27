@@ -180,7 +180,7 @@ class Chef
           hash = {}
           shell_out!("#{choco_exe} #{cmd}").stdout.each_line do |line|
             name, version = line.split('|')
-            hash[name] = version
+            hash[name] = version.chomp
           end
           hash
         end
