@@ -178,7 +178,7 @@ class Chef
         # @return [String] list output converted to ruby Hash
         def parse_list_output(cmd)
           hash = {}
-          shell_out!("#{choco.exe} #{cmd}").stdout.each_line do |line|
+          shell_out!("#{choco_exe} #{cmd}").stdout.each_line do |line|
             name, version = line.split('|')
             hash[name] = version
           end
