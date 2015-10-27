@@ -64,13 +64,13 @@ class Chef
 
           # choco does not support installing multiple packages with version pins
           name_has_versions.each do |name, version|
-            shell_out!("#{choco_exe} install -y -version #{version} #{cmd_args} #{name}")
+            shell_out_with_timeout!("#{choco_exe} install -y -version #{version} #{cmd_args} #{name}")
           end
 
           # but we can do all the ones without version pins at once
           unless name_nil_versions.empty?
             names = name_nil_versions.keys.join(' ')
-            shell_out!("#{choco_exe} install -y #{cmd_args} #{names}")
+            shell_out_with_timeout!("#{choco_exe} install -y #{cmd_args} #{names}")
           end
         end
 
@@ -84,7 +84,7 @@ class Chef
           end
 
           names = name.join(' ')
-          shell_out!("#{choco_exe} upgrade -y #{cmd_args} #{names}")
+          shell_out_with_timeout!("#{choco_exe} upgrade -y #{cmd_args} #{names}")
         end
 
         # Remove multiple packages via choco.exe
@@ -93,7 +93,7 @@ class Chef
         # @param version [Array<String>] array of versions to install
         def remove_package(name, version)
           names = name.join(' ')
-          shell_out!("#{choco_exe} uninstall -y #{cmd_args} #{names}")
+          shell_out_with_timeout!("#{choco_exe} uninstall -y #{cmd_args} #{names}")
         end
 
         # Support :uninstall as an action in order for users to easily convert
@@ -178,7 +178,7 @@ class Chef
         # @return [String] list output converted to ruby Hash
         def parse_list_output(cmd)
           hash = {}
-          shell_out!("#{choco_exe} #{cmd}").stdout.each_line do |line|
+          shell_out_with_timeout!("#{choco_exe} #{cmd}").stdout.each_line do |line|
             name, version = line.split('|')
             hash[name] = version.chomp
           end
