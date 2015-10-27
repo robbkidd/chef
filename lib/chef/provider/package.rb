@@ -37,11 +37,6 @@ class Chef
       def initialize(new_resource, run_context)
         super
         @candidate_version = nil
-        @supports_arrays = false
-      end
-
-      def self.package_class_supports_arrays
-        @supports_arrays = true
       end
 
       def whyrun_supported?
@@ -513,6 +508,22 @@ class Chef
         end
       end
 
+      class << self
+        attr_accessor :supports_arrays
+
+        def package_class_supports_arrays
+          @supports_arrays = true
+        end
+
+        def supports_arrays?
+          !!@supports_arrays
+        end
+      end
+
+      def supports_arrays?
+        self.class.supports_arrays?
+      end
+
       private
 
       def shell_out_with_timeout(*command_args)
@@ -534,10 +545,6 @@ class Chef
           args << { :timeout => new_resource.timeout ? new_resource.timeout : 900 }
         end
         args
-      end
-
-      def supports_arrays?
-        !!@supports_arrays
       end
     end
   end
