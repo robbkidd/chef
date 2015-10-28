@@ -126,28 +126,14 @@ class Chef
         end
 
         def build_candidate_versions
-          if new_resource.name.is_a?(Array)
-            # FIXME: superclass should be made smart enough so that when we declare
-            # package_class_supports_arrays, then it accepts current_resource.version as an
-            # array when new_resource.name is not
-            new_resource.name.map do |name|
-              available_packages[name.downcase]
-            end
-          else
-            available_packages[new_resource.name.downcase]
+          package_name_array.map do |package_name|
+            available_packages[package_name.downcase]
           end
         end
 
         def build_current_versions
-          if new_resource.name.is_a?(Array)
-            # FIXME: superclass should be made smart enough so that when we declare
-            # package_class_supports_arrays, then it accepts current_resource.version as an
-            # array when new_resource.name is not
-            new_resource.name.map do |name|
-              installed_packages[name.downcase]
-            end
-          else
-            installed_packages[new_resource.name.downcase]
+          package_name_array.map do |package_name|
+            installed_packages[package_name.downcase]
           end
         end
 
@@ -166,7 +152,7 @@ class Chef
           @available_packages ||= parse_list_output("list -r")
         end
 
-        # Insatlled packages in chocolatey as a Hash of names mapped to versions
+        # Installed packages in chocolatey as a Hash of names mapped to versions
         # (names are downcased for case-insensitive matching)
         #
         # @return [Hash] name-to-version mapping of installed packages

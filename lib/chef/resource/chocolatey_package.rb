@@ -1,6 +1,6 @@
 #
 # Author:: Adam Jacob (<adam@opscode.com>)
-# Copyright:: Copyright (c) 2008 Opscode, Inc.
+# Copyright:: Copyright (c) 2008-2015 Chef Software, Inc.
 # License:: Apache License, Version 2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,12 +23,15 @@ class Chef
     class ChocolateyPackage < Chef::Resource::Package
 
       provides :chocolatey_package, os: "windows"
-      # we should consider making this the default for :package on windows
 
       def initialize(name, run_context=nil)
         super
         @resource_name = :chocolatey_package
       end
+
+      property :package_name, [String, Array], coerce: proc { |x| [x].flatten }
+
+      property :version, [String, Array], coerce: proc { |x| [x].flatten }
     end
   end
 end
