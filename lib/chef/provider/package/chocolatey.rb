@@ -131,10 +131,10 @@ class Chef
             # package_class_supports_arrays, then it accepts current_resource.version as an
             # array when new_resource.name is not
             new_resource.name.map do |name|
-              available_packages[name]
+              available_packages[name.downcase]
             end
           else
-            available_packages[new_resource.name]
+            available_packages[new_resource.name.downcase]
           end
         end
 
@@ -144,10 +144,10 @@ class Chef
             # package_class_supports_arrays, then it accepts current_resource.version as an
             # array when new_resource.name is not
             new_resource.name.map do |name|
-              installed_packages[name]
+              installed_packages[name.downcase]
             end
           else
-            installed_packages[new_resource.name]
+            installed_packages[new_resource.name.downcase]
           end
         end
 
@@ -159,6 +159,7 @@ class Chef
         end
 
         # Available packages in chocolatey as a Hash of names mapped to versions
+        # (names are downcased for case-insensitive matching)
         #
         # @return [Hash] name-to-version mapping of available packages
         def available_packages
@@ -166,6 +167,7 @@ class Chef
         end
 
         # Insatlled packages in chocolatey as a Hash of names mapped to versions
+        # (names are downcased for case-insensitive matching)
         #
         # @return [Hash] name-to-version mapping of installed packages
         def installed_packages
@@ -173,6 +175,7 @@ class Chef
         end
 
         # Helper to convert choco.exe list output to a Hash
+        # (names are downcased for case-insenstive matching)
         #
         # @param cmd [String] command to run
         # @return [String] list output converted to ruby Hash
@@ -180,7 +183,7 @@ class Chef
           hash = {}
           shell_out_with_timeout!("#{choco_exe} #{cmd}").stdout.each_line do |line|
             name, version = line.split('|')
-            hash[name] = version.chomp
+            hash[name.downcase] = version.chomp
           end
           hash
         end
