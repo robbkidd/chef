@@ -17,7 +17,6 @@ pkg_deps=(
   core/libiconv
   core/xz
   core/zlib
-  core/bundler
   core/openssl
   core/cacerts
   core/libffi
